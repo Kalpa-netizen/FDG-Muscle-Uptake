@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0e121c" />
+<title>Muscle FDG Registry</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="icon" href="icons/favicon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#0b0f18;            /* console black */
+  --panel:#121826;         /* raised panel */
+  --panel-2:#0e131e;       /* recessed */
+  --line:#222c3f;          /* hairline */
+  --line-soft:#1a2233;
+  --ink:#e8eef7;           /* primary text */
+  --ink-dim:#9fb0c6;       /* secondary */
+  --ink-faint:#5f7188;     /* captions */
+  --field:#0c111b;
+  --field-focus:#101827;
+  /* PET hot-iron ramp — the signature */
+  --iron-0:#060811;
+  --iron-1:#5e0a54;
+  --iron-2:#d62436;
+  --iron-3:#f77f20;
+  --iron-4:#fccc3f;
+  --iron-5:#ffffff;
+  --hot:#f77f20;           /* accent pulled from ramp */
+  --hot-deep:#d62436;
+  --ok:#39c08b;
+  --warn:#e6b23a;
+  --bad:#e5545b;
+  --radius:14px;
+  --radius-sm:9px;
+  font-synthesis:none;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:
+    radial-gradient(1200px 700px at 82% -8%, rgba(247,127,32,.06), transparent 60%),
+    radial-gradient(900px 600px at -10% 110%, rgba(94,10,84,.10), transparent 55%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  font-size:15px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint)}
+
+/* ---------- shell ---------- */
+.app{max-width:1160px;margin:0 auto;min-height:100%;display:flex;flex-direction:column}
+header.top{
+  position:sticky;top:0;z-index:40;
+  backdrop-filter:blur(14px);
+  background:linear-gradient(180deg, rgba(11,15,24,.94), rgba(11,15,24,.78));
+  border-bottom:1px solid var(--line);
+}
+.top-inner{display:flex;align-items:center;gap:16px;padding:12px 20px;padding-top:max(12px,env(safe-area-inset-top))}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.mark{width:34px;height:34px;border-radius:9px;flex:none;
+  background:radial-gradient(circle at 50% 50%, #fff 0%, var(--iron-4) 14%, var(--iron-3) 34%, var(--iron-2) 56%, var(--iron-1) 78%, var(--iron-0) 100%);
+  box-shadow:0 0 0 1px #000 inset, 0 4px 14px rgba(247,127,32,.28);position:relative}
+.mark::after{content:"";position:absolute;inset:0;background:
+  linear-gradient(#e8eef8,#e8eef8) 50% 3px/1.5px 8px no-repeat,
+  linear-gradient(#e8eef8,#e8eef8) 50% calc(100% - 3px)/1.5px 8px no-repeat,
+  linear-gradient(#e8eef8,#e8eef8) 3px 50%/8px 1.5px no-repeat,
+  linear-gradient(#e8eef8,#e8eef8) calc(100% - 3px) 50%/8px 1.5px no-repeat;opacity:.85}
+.brand h1{font-family:"Space Grotesk";font-size:16px;font-weight:600;margin:0;letter-spacing:-.01em;white-space:nowrap}
+.brand .sub{font-size:11px;color:var(--ink-faint);font-family:"IBM Plex Mono",monospace;letter-spacing:.05em}
+.top-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.net{display:flex;align-items:center;gap:7px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-dim);
+  border:1px solid var(--line);border-radius:999px;padding:5px 11px;background:var(--panel-2)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.net.off .dot{background:var(--ink-faint);box-shadow:none}
+.net .q{color:var(--hot)}
+.iconbtn{width:36px;height:36px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink-dim);
+  cursor:pointer;display:grid;place-items:center;font-size:16px}
+.iconbtn:hover{color:var(--ink);border-color:#31405a}
+
+/* meta strip */
+.meta{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+.meta .cell{background:var(--bg);padding:10px 20px;display:flex;flex-direction:column;gap:3px}
+.meta label{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+.meta input{background:transparent;border:0;color:var(--ink);font-family:"IBM Plex Mono",monospace;font-size:14px;padding:2px 0;outline:none}
+.meta input::placeholder{color:#3d4b61}
+
+/* ---------- body layout ---------- */
+.body{display:grid;grid-template-columns:236px 1fr;flex:1;min-height:0}
+nav.rail{border-right:1px solid var(--line);padding:14px 12px;position:sticky;top:126px;align-self:start;height:calc(100vh - 126px);overflow:auto}
+.rail .eyebrow{padding:6px 10px 10px}
+.navitem{display:flex;align-items:center;gap:11px;width:100%;text-align:left;border:0;background:transparent;color:var(--ink-dim);
+  font-family:"IBM Plex Sans";font-size:13.5px;padding:9px 10px;border-radius:9px;cursor:pointer;position:relative}
+.navitem:hover{background:var(--panel-2);color:var(--ink)}
+.navitem.active{background:linear-gradient(90deg, rgba(247,127,32,.14), rgba(247,127,32,.02));color:var(--ink)}
+.navitem.active::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:linear-gradient(var(--iron-3),var(--iron-2))}
+.navitem .idx{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-faint);width:18px;flex:none}
+.navitem.active .idx{color:var(--hot)}
+.navitem .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navitem .tick{width:15px;height:15px;flex:none;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:9px;color:transparent}
+.navitem .tick.done{background:var(--ok);border-color:var(--ok);color:#03130d}
+
+main.stage{padding:24px 28px 140px;min-width:0}
+
+/* section stepper (mobile) */
+.stepper{display:none}
+
+.section{max-width:760px}
+.section-head{display:flex;align-items:baseline;gap:14px;margin:2px 0 18px;flex-wrap:wrap}
+.section-head .num{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--hot)}
+.section-head h2{font-family:"Space Grotesk";font-weight:600;font-size:22px;margin:0;letter-spacing:-.02em}
+.section-head p{width:100%;margin:2px 0 0;color:var(--ink-dim);font-size:13.5px}
+
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 18px}
+.field{display:flex;flex-direction:column;gap:7px}
+.field.wide{grid-column:1/-1}
+.field > label{font-size:12.5px;color:var(--ink-dim);display:flex;gap:8px;align-items:center;font-weight:500}
+.field .hint{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink-faint)}
+.control{position:relative;display:flex;align-items:center}
+input.txt,select.txt,textarea.txt{
+  width:100%;background:var(--field);border:1px solid var(--line);border-radius:var(--radius-sm);
+  color:var(--ink);padding:10px 12px;font-size:14px;font-family:"IBM Plex Sans";outline:none;transition:border-color .12s,background .12s}
+input.num{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+textarea.txt{resize:vertical;min-height:64px;line-height:1.5}
+input.txt:focus,select.txt:focus,textarea.txt:focus{border-color:var(--hot);background:var(--field-focus);box-shadow:0 0 0 3px rgba(247,127,32,.12)}
+select.txt{appearance:none;cursor:pointer;background-image:linear-gradient(45deg,transparent 50%,var(--ink-faint) 50%),linear-gradient(135deg,var(--ink-faint) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 18px,calc(100% - 13px) 18px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:34px}
+.unit{position:absolute;right:12px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-faint);pointer-events:none}
+input.num{padding-right:52px}
+
+/* segmented yes/no/unknown */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;background:var(--field)}
+.seg button{border:0;background:transparent;color:var(--ink-dim);padding:9px 0;min-width:56px;font-family:"IBM Plex Mono",monospace;font-size:12.5px;cursor:pointer;letter-spacing:.03em}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{color:#0b0f18;font-weight:600}
+.seg button.yes[aria-pressed="true"]{background:var(--hot)}
+.seg button.no[aria-pressed="true"]{background:#39485f;color:var(--ink)}
+.seg button.na[aria-pressed="true"]{background:#26324a;color:var(--ink-dim)}
+
+/* hot-iron visual grade selector — signature */
+.gradewrap{grid-column:1/-1}
+.grade-scale{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.grade{position:relative;border:1px solid var(--line);border-radius:12px;background:var(--panel-2);padding:12px;cursor:pointer;overflow:hidden;text-align:left;color:var(--ink-dim);transition:transform .1s,border-color .12s}
+.grade:hover{transform:translateY(-2px)}
+.grade .swatch{height:38px;border-radius:8px;margin-bottom:10px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.grade[data-g="0"] .swatch{background:linear-gradient(120deg,var(--iron-0),#141a29)}
+.grade[data-g="1"] .swatch{background:linear-gradient(120deg,var(--iron-1),var(--iron-2))}
+.grade[data-g="2"] .swatch{background:linear-gradient(120deg,var(--iron-2),var(--iron-3))}
+.grade[data-g="3"] .swatch{background:linear-gradient(120deg,var(--iron-3),var(--iron-4),var(--iron-5))}
+.grade .g{font-family:"Space Grotesk";font-weight:600;color:var(--ink);font-size:14px}
+.grade .ref{font-size:11px;line-height:1.35;margin-top:2px;display:block}
+.grade[aria-pressed="true"]{border-color:var(--hot);color:var(--ink);box-shadow:0 0 0 1px var(--hot),0 8px 24px rgba(247,127,32,.16)}
+
+/* muscle matrix */
+.region{border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden;background:var(--panel-2)}
+.region > summary{list-style:none;cursor:pointer;padding:12px 16px;display:flex;align-items:center;gap:10px;font-family:"Space Grotesk";font-weight:500}
+.region > summary::-webkit-details-marker{display:none}
+.region > summary .chev{margin-left:auto;color:var(--ink-faint);transition:transform .15s}
+.region[open] > summary .chev{transform:rotate(90deg)}
+.region .rcount{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--hot);background:rgba(247,127,32,.12);border-radius:999px;padding:2px 8px}
+.mrow{display:flex;align-items:center;gap:10px;padding:9px 16px;border-top:1px solid var(--line-soft)}
+.mrow .mname{flex:1;font-size:13.5px;color:var(--ink-dim)}
+.mrow.set .mname{color:var(--ink)}
+.mgrade{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.mgrade button{border:0;background:var(--field);color:var(--ink-faint);width:34px;height:30px;font-family:"IBM Plex Mono",monospace;font-size:12px;cursor:pointer}
+.mgrade button+button{border-left:1px solid var(--line)}
+.mgrade button[aria-pressed="true"]{color:#0b0f18;font-weight:600}
+.mgrade button[data-v="0"][aria-pressed="true"]{background:#3a4a63;color:var(--ink)}
+.mgrade button[data-v="1"][aria-pressed="true"]{background:var(--iron-1);color:#fff}
+.mgrade button[data-v="2"][aria-pressed="true"]{background:var(--iron-2);color:#fff}
+.mgrade button[data-v="3"][aria-pressed="true"]{background:var(--iron-3)}
+
+/* exclusion checklist */
+.checklist{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 16px}
+.chk{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);cursor:pointer;font-size:13px;color:var(--ink-dim)}
+.chk input{margin-top:2px;accent-color:var(--bad);width:15px;height:15px}
+.chk.on{border-color:var(--bad);color:var(--ink);background:rgba(229,84,91,.06)}
+.excl-banner{grid-column:1/-1;display:none;align-items:center;gap:10px;border:1px solid var(--bad);background:rgba(229,84,91,.08);color:#ffd7d9;border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:14px}
+.excl-banner.show{display:flex}
+
+/* footer action bar */
+.actionbar{position:fixed;left:0;right:0;bottom:0;z-index:45;border-top:1px solid var(--line);
+  background:linear-gradient(180deg, rgba(11,15,24,.75), rgba(11,15,24,.97));backdrop-filter:blur(14px);
+  padding:12px 20px;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+.actionbar .inner{max-width:1160px;margin:0 auto;display:flex;align-items:center;gap:14px}
+.prog{flex:1;min-width:0}
+.prog .bar{height:6px;border-radius:999px;background:var(--line-soft);overflow:hidden}
+.prog .fill{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--iron-1),var(--iron-2),var(--iron-3),var(--iron-4));transition:width .3s}
+.prog .lbl{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-faint);margin-top:5px;display:flex;gap:14px}
+.prog .lbl b{color:var(--ink-dim);font-weight:500}
+.btn{border:0;border-radius:10px;font-family:"Space Grotesk";font-weight:600;font-size:14px;cursor:pointer;padding:12px 18px;white-space:nowrap}
+.btn.ghost{background:var(--panel);color:var(--ink-dim);border:1px solid var(--line)}
+.btn.ghost:hover{color:var(--ink);border-color:#33425c}
+.btn.primary{background:linear-gradient(180deg,var(--iron-3),var(--iron-2));color:#160a04;box-shadow:0 6px 20px rgba(247,127,32,.28)}
+.btn.primary:hover{filter:brightness(1.05)}
+.btn.primary:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+.btn .sp{display:inline-block;width:13px;height:13px;border:2px solid rgba(0,0,0,.35);border-top-color:#160a04;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:7px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* modal */
+.overlay{position:fixed;inset:0;z-index:60;background:rgba(4,7,12,.66);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:20px}
+.overlay.show{display:flex}
+.modal{width:min(560px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.modal .mh{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.modal .mh h3{font-family:"Space Grotesk";margin:0;font-size:16px}
+.modal .mb{padding:20px;display:flex;flex-direction:column;gap:16px}
+.modal .mb p{margin:0;color:var(--ink-dim);font-size:13px;line-height:1.55}
+.modal ol{margin:0;padding-left:18px;color:var(--ink-dim);font-size:13px;line-height:1.7}
+.modal code{font-family:"IBM Plex Mono",monospace;background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:12px;color:var(--hot)}
+.modal .mf{padding:16px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px}
+.status{font-family:"IBM Plex Mono",monospace;font-size:12px;padding:8px 12px;border-radius:8px;display:none}
+.status.ok{display:block;background:rgba(57,192,139,.1);color:var(--ok);border:1px solid rgba(57,192,139,.3)}
+.status.err{display:block;background:rgba(229,84,91,.1);color:var(--bad);border:1px solid rgba(229,84,91,.3)}
+
+/* toast */
+.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:96px;z-index:70;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 18px;display:flex;align-items:center;gap:11px;
+  box-shadow:0 16px 40px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;font-size:13.5px;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast .ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;flex:none}
+.toast.good .ic{background:var(--ok);color:#03130d}
+.toast.warn .ic{background:var(--warn);color:#2a1e02}
+.toast.err .ic{background:var(--bad);color:#2a0708}
+
+@media (max-width:860px){
+  .body{grid-template-columns:1fr}
+  nav.rail{display:none}
+  .meta{grid-template-columns:1fr 1fr}
+  .grid{grid-template-columns:1fr}
+  .grade-scale{grid-template-columns:repeat(2,1fr)}
+  .checklist{grid-template-columns:1fr}
+  main.stage{padding:18px 18px 150px}
+  .stepper{display:flex;gap:6px;padding:12px 16px;overflow-x:auto;border-bottom:1px solid var(--line);position:sticky;top:118px;z-index:30;background:var(--bg);scrollbar-width:none}
+  .stepper::-webkit-scrollbar{display:none}
+  .stepchip{flex:none;font-family:"IBM Plex Mono",monospace;font-size:11.5px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink-dim);cursor:pointer;white-space:nowrap}
+  .stepchip.active{background:var(--hot);color:#0b0f18;border-color:var(--hot);font-weight:600}
+  .stepchip.done{border-color:var(--ok);color:var(--ok)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand">
+        <div class="mark" aria-hidden="true"></div>
+        <div>
+          <h1>Muscle FDG Registry</h1>
+          <div class="sub">FDG-PET · bedridden uptake study</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="net" id="net" title="Connection & queue"><span class="dot"></span><span id="netTxt">online</span><span class="q" id="qBadge"></span></div>
+        <button class="iconbtn" id="syncBtn" title="Sync queued records">⟳</button>
+        <button class="iconbtn" id="setBtn" title="Google Sheet setup">⚙</button>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="cell"><label>Patient / study ID</label><input id="m_pid" class="mono" placeholder="e.g. FDG-0042" autocomplete="off"/></div>
+      <div class="cell"><label>Scan date</label><input id="m_date" class="mono" type="date"/></div>
+      <div class="cell"><label>Operator</label><input id="m_op" class="mono" placeholder="initials" autocomplete="off"/></div>
+    </div>
+  </header>
+
+  <div class="body">
+    <nav class="rail" id="rail"><div class="eyebrow">Sections</div></nav>
+    <div style="min-width:0">
+      <div class="stepper" id="stepper"></div>
+      <main class="stage"><div id="sectionHost"></div></main>
+    </div>
+  </div>
+</div>
+
+<div class="actionbar">
+  <div class="inner">
+    <div class="prog">
+      <div class="bar"><div class="fill" id="progFill"></div></div>
+      <div class="lbl"><span><b id="progPct">0%</b> complete</span><span id="progCount">0 fields</span><span id="queuedInline"></span></div>
+    </div>
+    <button class="btn ghost" id="clearBtn">Clear</button>
+    <button class="btn primary" id="saveBtn">Save record</button>
+  </div>
+</div>
+
+<!-- settings modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="mh"><span>⚙</span><h3>Connect your Google Sheet</h3></div>
+    <div class="mb">
+      <p>Paste the Web App URL from your Apps Script deployment. Records POST straight into the sheet — no keys, no accounts to wire up. Setup steps are in <code>README.md</code>.</p>
+      <div class="field">
+        <label>Apps Script Web App URL</label>
+        <input id="endpoint" class="txt mono" placeholder="https://script.google.com/macros/s/AKfy.../exec" autocomplete="off"/>
+      </div>
+      <div id="testStatus" class="status"></div>
+      <p style="font-size:12px;color:var(--ink-faint)">The URL is stored on this device only. If storage is blocked (e.g. preview sandbox) it stays for this session.</p>
+    </div>
+    <div class="mf">
+      <button class="btn ghost" id="testBtn">Send test row</button>
+      <button class="btn primary" id="saveEndpoint">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><div class="ic" id="toastIc">✓</div><div id="toastMsg"></div></div>
+
+<script>
+/* ============================================================
+   SCHEMA  — order here defines the Google Sheet column order
+   ============================================================ */
+const YN = 'bool';
+const SECTIONS = [
+  { id:'elig', name:'Eligibility', desc:'Flag anything that independently raises muscular FDG uptake. Any flag marks the record as an exclusion.', kind:'exclusion',
+    fields:[
+      ['ex_exercise','Strenuous exercise <24 h'],['ex_seizure','Seizure <24 h'],
+      ['ex_tremor','Parkinsonism / tremor'],['ex_trauma','Muscle injury or trauma'],
+      ['ex_im_inj','Recent IM injection'],['ex_myositis','Myositis'],
+      ['ex_mets','Muscular metastases'],['ex_infection','Active muscle infection'],
+      ['ex_surgery','Recent surgery'],['ex_brownfat','Brown fat into muscle'],
+      ['ex_dm_uncontrolled','Uncontrolled diabetes'],['ex_hyperglyc','Severe hyperglycaemia >200 mg/dL'],
+    ]},
+  { id:'demo', name:'Demographics', desc:'Baseline body variables used for SUV normalisation.',
+    fields:[
+      {k:'age',l:'Age',t:'num',u:'yr'},
+      {k:'sex',l:'Sex',t:'sel',o:['Male','Female','Other']},
+      {k:'weight',l:'Weight',t:'num',u:'kg'},
+      {k:'bmi',l:'BMI',t:'num',u:'kg/m²'},
+    ]},
+  { id:'clin', name:'Clinical status', desc:'Diagnosis, functional scores and drivers of immobilisation.',
+    fields:[
+      {k:'diagnosis',l:'Primary diagnosis',t:'text',wide:true,ph:'e.g. NSCLC, sepsis, spinal cord injury'},
+      {k:'ecog',l:'ECOG performance status',t:'sel',o:['0','1','2','3','4']},
+      {k:'kps',l:'Karnofsky performance status',t:'sel',o:['100','90','80','70','60','50','40','30','20','10']},
+      {k:'bedrest_days',l:'Duration bedridden',t:'num',u:'days',hint:'primary variable of interest'},
+      {k:'immob_cause',l:'Cause of immobilisation',t:'sel',o:['Neurological','Orthopedic','ICU / critical illness','Generalised weakness','Spinal injury','Other']},
+      {k:'icu',l:'ICU admission',t:YN},
+      {k:'ventilation',l:'Mechanical ventilation',t:YN},
+    ]},
+  { id:'mob', name:'Mobility', desc:'How much the muscles have been activated recently.',
+    fields:[
+      {k:'mobility',l:'Mobility class',t:'sel',o:['Completely bedridden','Partially mobile']},
+      {k:'physio',l:'Physiotherapy received',t:YN},
+      {k:'passive_move',l:'Passive limb movement',t:YN},
+      {k:'spasm',l:'Muscle spasm / tremor',t:YN},
+    ]},
+  { id:'metab', name:'Metabolic', desc:'Glucose handling — the main confounder of FDG biodistribution.',
+    fields:[
+      {k:'glucose',l:'Blood glucose before FDG',t:'num',u:'mg/dL'},
+      {k:'diabetes',l:'Diabetes mellitus',t:YN},
+      {k:'hba1c',l:'HbA1c',t:'num',u:'%'},
+      {k:'insulin',l:'Insulin administered',t:YN},
+      {k:'steroid',l:'Steroid therapy',t:YN},
+    ]},
+  { id:'prep', name:'Preparation', desc:'Scan-day conditions that standardise or bias uptake.',
+    fields:[
+      {k:'fasting',l:'Fasting duration',t:'num',u:'h'},
+      {k:'fdg_dose',l:'FDG dose',t:'num',u:'MBq'},
+      {k:'uptake_time',l:'Uptake time',t:'num',u:'min'},
+      {k:'rested',l:'Rested during uptake',t:YN},
+      {k:'sedation',l:'Sedation',t:YN},
+      {k:'recent_exercise',l:'Recent exercise <24 h',t:YN},
+      {k:'shivering',l:'Shivering during uptake',t:YN},
+    ]},
+  { id:'lab', name:'Laboratory', desc:'Injury, inflammation and nutritional markers.',
+    fields:[
+      {k:'ck',l:'Creatine kinase (CK)',t:'num',u:'U/L'},
+      {k:'crp',l:'CRP',t:'num',u:'mg/L'},
+      {k:'albumin',l:'Albumin',t:'num',u:'g/dL'},
+      {k:'hb',l:'Haemoglobin',t:'num',u:'g/dL'},
+    ]},
+  { id:'img', name:'Imaging & body comp', desc:'CT-derived muscle quantity and quality (sarcopenia / myosteatosis).',
+    fields:[
+      {k:'ct_hu',l:'CT muscle attenuation',t:'num',u:'HU'},
+      {k:'csa',l:'Muscle cross-sectional area',t:'num',u:'cm²'},
+      {k:'edema',l:'Muscle edema',t:YN},
+      {k:'atrophy',l:'Muscle atrophy',t:YN},
+      {k:'smi_l3',l:'Skeletal muscle index (L3)',t:'num',u:'cm²/m²'},
+      {k:'psoas_area',l:'Psoas muscle area',t:'num',u:'cm²'},
+      {k:'imf',l:'Intramuscular fat (myosteatosis)',t:'num',u:'HU'},
+      {k:'vfa',l:'Visceral fat area',t:'num',u:'cm²'},
+      {k:'sfa',l:'Subcutaneous fat area',t:'num',u:'cm²'},
+    ]},
+  { id:'muscles', name:'Muscle grading', desc:'Grade each muscle against liver reference (0–3). Leave blank if not assessed.', kind:'muscles',
+    regions:[
+      ['Upper limb',['Deltoid','Biceps brachii','Triceps']],
+      ['Neck',['Sternocleidomastoid','Trapezius']],
+      ['Thorax',['Pectoralis major','Intercostals']],
+      ['Abdomen',['Rectus abdominis','Oblique muscles']],
+      ['Back',['Erector spinae','Multifidus','Quadratus lumborum']],
+      ['Pelvis',['Gluteus maximus','Gluteus medius','Iliopsoas']],
+      ['Lower limb',['Quadriceps','Hamstrings','Adductors','Tibialis anterior','Gastrocnemius','Soleus']],
+    ]},
+  { id:'uptake', name:'Uptake pattern', desc:'Overall visual read and pattern classification.', kind:'uptake',
+    fields:[
+      {k:'pattern',l:'Uptake pattern category',t:'sel',wide:true,o:[
+        'No significant muscular uptake','Mild diffuse symmetric','Moderate diffuse','Intense diffuse',
+        'Predominantly paraspinal','Predominantly pelvic','Lower-limb predominant','Focal','Asymmetric']},
+      {k:'symmetry',l:'Symmetry',t:'sel',o:['Symmetric','Asymmetric','N/A']},
+    ]},
+  { id:'out', name:'Outcomes', desc:'Quantitative read-outs — the study endpoints.',
+    fields:[
+      {k:'suvmax',l:'SUVmax',t:'num'},
+      {k:'suvmean',l:'SUVmean',t:'num',hint:'preferred endpoint'},
+      {k:'muscle_liver_ratio',l:'Muscle-to-liver ratio',t:'num',hint:'better normalisation'},
+      {k:'metabolic_volume',l:'Metabolic muscle volume',t:'num',u:'cm³'},
+      {k:'n_muscles',l:'Number of muscles involved',t:'num'},
+      {k:'notes',l:'Notes',t:'area',wide:true,ph:'Free-text observations'},
+    ]},
+];
+
+const GRADE_REF = [
+  {g:'Grade 0',r:'Less than blood pool'},
+  {g:'Grade 1',r:'Blood pool → below liver'},
+  {g:'Grade 2',r:'Similar to liver'},
+  {g:'Grade 3',r:'Greater than liver'},
+];
+
+/* ---------- safe storage (degrades in sandbox) ---------- */
+const mem = {};
+const store = {
+  get(k){ try{ const v=localStorage.getItem(k); return v===null?(k in mem?mem[k]:null):v; }catch(e){ return k in mem?mem[k]:null; } },
+  set(k,v){ mem[k]=v; try{ localStorage.setItem(k,v); }catch(e){} },
+};
+
+/* ---------- state ---------- */
+const state = {};          // key -> value
+const muscles = {};        // muscleKey -> grade
+let activeSection = SECTIONS[0].id;
+let visualGrade = null;
+
+function muscleKey(name){ return 'm_'+name.toLowerCase().replace(/[^a-z]+/g,'_').replace(/^_|_$/g,''); }
+
+/* flat, ordered list of all data keys for the sheet header */
+function orderedKeys(){
+  const keys = ['record_id','submitted_at','patient_id','scan_date','operator'];
+  for(const s of SECTIONS){
+    if(s.kind==='exclusion'){ s.fields.forEach(([k])=>keys.push(k)); keys.push('is_excluded'); }
+    else if(s.kind==='muscles'){ s.regions.forEach(([,ms])=>ms.forEach(m=>keys.push(muscleKey(m)))); }
+    else { s.fields.forEach(f=>keys.push(f.k)); if(s.id==='uptake') keys.push('visual_grade'); }
+  }
+  return keys;
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+const host = document.getElementById('sectionHost');
+const rail = document.getElementById('rail');
+const stepper = document.getElementById('stepper');
+
+function renderNav(){
+  rail.querySelectorAll('.navitem').forEach(n=>n.remove());
+  stepper.innerHTML='';
+  SECTIONS.forEach((s,i)=>{
+    const b=document.createElement('button');
+    b.className='navitem'+(s.id===activeSection?' active':'');
+    b.innerHTML=`<span class="idx">${String(i+1).padStart(2,'0')}</span><span class="nm">${s.name}</span><span class="tick" data-sec="${s.id}">✓</span>`;
+    b.onclick=()=>{activeSection=s.id;renderNav();renderSection();window.scrollTo({top:0,behavior:'smooth'});};
+    rail.appendChild(b);
+    const c=document.createElement('button');
+    c.className='stepchip'+(s.id===activeSection?' active':'');
+    c.dataset.sec=s.id; c.textContent=`${i+1}. ${s.name}`;
+    c.onclick=()=>{activeSection=s.id;renderNav();renderSection();};
+    stepper.appendChild(c);
+  });
+  updateTicks();
+}
+
+function fieldControl(f){
+  const wrap=document.createElement('div');
+  wrap.className='field'+((f.wide||f.t==='area')?' wide':'');
+  const id='f_'+f.k;
+  let label=`<label for="${id}">${f.l}${f.hint?` <span class="hint">· ${f.hint}</span>`:''}</label>`;
+  if(f.t==='bool'){
+    label=`<label>${f.l}${f.hint?` <span class="hint">· ${f.hint}</span>`:''}</label>`;
+    wrap.innerHTML=label+segHTML(f.k);
+    bindSeg(wrap,f.k);
+    return wrap;
+  }
+  let control='';
+  if(f.t==='sel'){
+    control=`<div class="control"><select id="${id}" class="txt"><option value="">—</option>${f.o.map(o=>`<option>${o}</option>`).join('')}</select></div>`;
+  } else if(f.t==='text'){
+    control=`<div class="control"><input id="${id}" class="txt" type="text" ${f.ph?`placeholder="${f.ph}"`:''} autocomplete="off"/></div>`;
+  } else if(f.t==='area'){
+    control=`<div class="control"><textarea id="${id}" class="txt" ${f.ph?`placeholder="${f.ph}"`:''}></textarea></div>`;
+  } else { // num
+    control=`<div class="control"><input id="${id}" class="txt num" type="text" inputmode="decimal" autocomplete="off"/>${f.u?`<span class="unit">${f.u}</span>`:''}</div>`;
+  }
+  wrap.innerHTML=label+control;
+  const el=wrap.querySelector('#'+CSS.escape(id));
+  if(state[f.k]!=null) el.value=state[f.k];
+  const commit=()=>{ state[f.k]= el.value===''?undefined:el.value; onChange(); };
+  el.addEventListener('input',commit); el.addEventListener('change',commit);
+  return wrap;
+}
+
+function segHTML(key){
+  const v=state[key];
+  return `<div class="seg" data-seg="${key}">
+    <button class="yes" data-v="Yes" aria-pressed="${v==='Yes'}">Yes</button>
+    <button class="no" data-v="No" aria-pressed="${v==='No'}">No</button>
+    <button class="na" data-v="Unknown" aria-pressed="${v==='Unknown'}">—</button></div>`;
+}
+function bindSeg(scope,key){
+  scope.querySelectorAll(`[data-seg="${key}"] button`).forEach(btn=>{
+    btn.onclick=()=>{
+      const val=btn.dataset.v;
+      state[key]= state[key]===val?undefined:val;
+      scope.querySelectorAll(`[data-seg="${key}"] button`).forEach(b=>b.setAttribute('aria-pressed', state[key]===b.dataset.v));
+      onChange();
+    };
+  });
+}
+
+function renderSection(){
+  const s=SECTIONS.find(x=>x.id===activeSection);
+  const idx=SECTIONS.indexOf(s)+1;
+  const el=document.createElement('div'); el.className='section';
+  el.innerHTML=`<div class="section-head"><span class="num">${String(idx).padStart(2,'0')} / ${SECTIONS.length}</span><h2>${s.name}</h2><p>${s.desc}</p></div>`;
+
+  if(s.kind==='exclusion'){
+    const banner=document.createElement('div');banner.className='excl-banner';banner.id='exclBanner';
+    banner.innerHTML='<span>⚠</span><span>One or more exclusion criteria flagged — this record will be saved with <b>is_excluded = Yes</b>.</span>';
+    el.appendChild(banner);
+    const list=document.createElement('div');list.className='checklist';
+    s.fields.forEach(([k,l])=>{
+      const lab=document.createElement('label');lab.className='chk'+(state[k]==='Yes'?' on':'');
+      lab.innerHTML=`<input type="checkbox" ${state[k]==='Yes'?'checked':''}/><span>${l}</span>`;
+      lab.querySelector('input').onchange=e=>{state[k]=e.target.checked?'Yes':undefined;lab.classList.toggle('on',e.target.checked);updateExclBanner();onChange();};
+      list.appendChild(lab);
+    });
+    el.appendChild(list);
+    host.innerHTML='';host.appendChild(el);updateExclBanner();return;
+  }
+
+  if(s.kind==='muscles'){
+    s.regions.forEach(([region,ms])=>{
+      const det=document.createElement('details');det.className='region';det.open=false;
+      const setCount=ms.filter(m=>muscles[muscleKey(m)]!=null).length;
+      det.innerHTML=`<summary>${region}<span class="rcount" data-region="${region}">${setCount}/${ms.length}</span><span class="chev">▸</span></summary>`;
+      ms.forEach(m=>{
+        const mk=muscleKey(m);
+        const row=document.createElement('div');row.className='mrow'+(muscles[mk]!=null?' set':'');
+        row.innerHTML=`<span class="mname">${m}</span>
+          <div class="mgrade" data-m="${mk}">${[0,1,2,3].map(v=>`<button data-v="${v}" aria-pressed="${muscles[mk]===v}">${v}</button>`).join('')}</div>`;
+        row.querySelectorAll('button').forEach(btn=>{
+          btn.onclick=()=>{
+            const v=+btn.dataset.v;
+            muscles[mk]= muscles[mk]===v?undefined:v;
+            row.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',muscles[mk]===+b.dataset.v));
+            row.classList.toggle('set',muscles[mk]!=null);
+            det.querySelector(`[data-region="${region}"]`).textContent=`${ms.filter(x=>muscles[muscleKey(x)]!=null).length}/${ms.length}`;
+            onChange();
+          };
+        });
+        det.appendChild(row);
+      });
+      el.appendChild(det);
+    });
+    host.innerHTML='';host.appendChild(el);return;
+  }
+
+  const grid=document.createElement('div');grid.className='grid';
+  s.fields.forEach(f=>grid.appendChild(fieldControl(f)));
+
+  if(s.id==='uptake'){
+    const gw=document.createElement('div');gw.className='field gradewrap';
+    gw.innerHTML=`<label>Overall visual grade <span class="hint">· liver reference</span></label>
+      <div class="grade-scale">${GRADE_REF.map((x,i)=>`<button type="button" class="grade" data-g="${i}" aria-pressed="${visualGrade===i}">
+        <div class="swatch"></div><span class="g">${x.g}</span><span class="ref">${x.r}</span></button>`).join('')}</div>`;
+    gw.querySelectorAll('.grade').forEach(btn=>{
+      btn.onclick=()=>{const g=+btn.dataset.g; visualGrade=visualGrade===g?null:g;
+        gw.querySelectorAll('.grade').forEach(b=>b.setAttribute('aria-pressed',visualGrade===+b.dataset.g));onChange();};
+    });
+    grid.appendChild(gw);
+  }
+  el.appendChild(grid);
+  host.innerHTML='';host.appendChild(el);
+}
+
+function updateExclBanner(){
+  const b=document.getElementById('exclBanner');if(!b)return;
+  const any=SECTIONS[0].fields.some(([k])=>state[k]==='Yes');
+  b.classList.toggle('show',any);
+}
+
+/* ============================================================
+   PROGRESS + TICKS
+   ============================================================ */
+function sectionFilled(s){
+  if(s.kind==='exclusion') return true; // optional gate
+  if(s.kind==='muscles') return Object.values(muscles).some(v=>v!=null);
+  let has=false;
+  s.fields.forEach(f=>{ if(state[f.k]!=null && state[f.k]!=='') has=true; });
+  if(s.id==='uptake' && visualGrade!=null) has=true;
+  return has;
+}
+function updateTicks(){
+  document.querySelectorAll('.tick').forEach(t=>{
+    const s=SECTIONS.find(x=>x.id===t.dataset.sec);
+    t.classList.toggle('done',sectionFilled(s));
+  });
+  document.querySelectorAll('.stepchip').forEach(c=>{
+    const s=SECTIONS.find(x=>x.id===c.dataset.sec);
+    c.classList.toggle('done',sectionFilled(s));
+  });
+}
+function countableTotal(){
+  let n=0;
+  SECTIONS.forEach(s=>{ if(s.kind==='exclusion'||s.kind==='muscles')return; s.fields.forEach(()=>n++); if(s.id==='uptake')n++; });
+  return n;
+}
+function countableFilled(){
+  let n=0;
+  SECTIONS.forEach(s=>{ if(s.kind==='exclusion'||s.kind==='muscles')return;
+    s.fields.forEach(f=>{ if(state[f.k]!=null&&state[f.k]!=='')n++; });
+    if(s.id==='uptake'&&visualGrade!=null)n++; });
+  return n;
+}
+function onChange(){
+  const total=countableTotal(), filled=countableFilled();
+  const pct=Math.round(filled/total*100);
+  document.getElementById('progFill').style.width=pct+'%';
+  document.getElementById('progPct').textContent=pct+'%';
+  const mset=Object.values(muscles).filter(v=>v!=null).length;
+  document.getElementById('progCount').textContent=`${filled}/${total} fields · ${mset} muscles`;
+  updateTicks();
+}
+
+/* ============================================================
+   SAVE + SYNC
+   ============================================================ */
+function buildRecord(){
+  const rec={
+    record_id:'r-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6),
+    submitted_at:new Date().toISOString(),
+    patient_id:document.getElementById('m_pid').value.trim(),
+    scan_date:document.getElementById('m_date').value,
+    operator:document.getElementById('m_op').value.trim(),
+  };
+  SECTIONS.forEach(s=>{
+    if(s.kind==='exclusion'){ s.fields.forEach(([k])=>rec[k]=state[k]==='Yes'?'Yes':'No');
+      rec.is_excluded=s.fields.some(([k])=>state[k]==='Yes')?'Yes':'No'; }
+    else if(s.kind==='muscles'){ s.regions.forEach(([,ms])=>ms.forEach(m=>{const mk=muscleKey(m);rec[mk]=muscles[mk]!=null?muscles[mk]:'';})); }
+    else { s.fields.forEach(f=>rec[f.k]=state[f.k]!=null?state[f.k]:''); if(s.id==='uptake')rec.visual_grade=visualGrade!=null?visualGrade:''; }
+  });
+  return rec;
+}
+
+function getQueue(){ try{ return JSON.parse(store.get('fdg_queue')||'[]'); }catch(e){ return []; } }
+function setQueue(q){ store.set('fdg_queue',JSON.stringify(q)); refreshQueueUI(); }
+function refreshQueueUI(){
+  const q=getQueue(), n=q.length;
+  document.getElementById('qBadge').textContent=n?` · ${n} queued`:'';
+  document.getElementById('queuedInline').textContent=n?`${n} awaiting sync`:'';
+  document.getElementById('syncBtn').style.color=n?'var(--hot)':'';
+}
+
+async function postRecords(records){
+  const url=store.get('fdg_endpoint');
+  if(!url) throw new Error('no-endpoint');
+  const res=await fetch(url,{
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},  // simple request → no CORS preflight
+    body:JSON.stringify({fields:orderedKeys(),records}),
+  });
+  const txt=await res.text();
+  let data; try{ data=JSON.parse(txt); }catch(e){ throw new Error('bad-response'); }
+  if(!data.ok) throw new Error(data.error||'server-error');
+  return data;
+}
+
+async function saveRecord(){
+  const pid=document.getElementById('m_pid').value.trim();
+  if(!pid){ toast('warn','Enter a Patient / study ID first'); document.getElementById('m_pid').focus(); return; }
+  if(!store.get('fdg_endpoint')){ openSettings(); toast('warn','Connect your Google Sheet to save'); return; }
+  const rec=buildRecord();
+  const btn=document.getElementById('saveBtn'); btn.disabled=true; const orig=btn.innerHTML;
+  btn.innerHTML='<span class="sp"></span>Saving';
+  try{
+    if(!navigator.onLine) throw new Error('offline');
+    await postRecords([rec]);
+    toast('good',`Saved ${pid} to sheet`);
+    resetForm();
+  }catch(err){
+    const q=getQueue(); q.push(rec); setQueue(q);
+    if(err.message==='offline') toast('warn',`Offline — ${pid} queued`);
+    else toast('warn',`Couldn't reach sheet — ${pid} queued`);
+    resetForm();
+  }finally{ btn.disabled=false; btn.innerHTML=orig; }
+}
+
+async function syncQueue(silent){
+  let q=getQueue();
+  if(!q.length){ if(!silent)toast('good','Nothing to sync'); return; }
+  if(!store.get('fdg_endpoint')){ openSettings(); return; }
+  if(!navigator.onLine){ if(!silent)toast('warn','Still offline'); return; }
+  const btn=document.getElementById('syncBtn'); btn.style.transition='transform .6s'; btn.style.transform='rotate(360deg)';
+  try{
+    await postRecords(q);
+    setQueue([]);
+    toast('good',`Synced ${q.length} record${q.length>1?'s':''}`);
+  }catch(err){ if(!silent)toast('err','Sync failed — will retry'); }
+  finally{ setTimeout(()=>{btn.style.transform='';},600); }
+}
+
+function resetForm(){
+  for(const k in state) delete state[k];
+  for(const k in muscles) delete muscles[k];
+  visualGrade=null;
+  document.getElementById('m_pid').value='';
+  // keep operator + date for the next patient
+  activeSection=SECTIONS[0].id;
+  renderNav();renderSection();onChange();
+}
+
+/* ============================================================
+   SETTINGS + TEST
+   ============================================================ */
+const overlay=document.getElementById('overlay');
+function openSettings(){ document.getElementById('endpoint').value=store.get('fdg_endpoint')||''; document.getElementById('testStatus').className='status'; overlay.classList.add('show'); }
+document.getElementById('setBtn').onclick=openSettings;
+overlay.onclick=e=>{ if(e.target===overlay) overlay.classList.remove('show'); };
+document.getElementById('saveEndpoint').onclick=()=>{
+  const v=document.getElementById('endpoint').value.trim();
+  store.set('fdg_endpoint',v); overlay.classList.remove('show');
+  toast('good', v?'Sheet connected':'Endpoint cleared');
+};
+document.getElementById('testBtn').onclick=async()=>{
+  const v=document.getElementById('endpoint').value.trim();
+  const st=document.getElementById('testStatus');
+  if(!v){ st.className='status err'; st.textContent='Paste a URL first.'; return; }
+  store.set('fdg_endpoint',v);
+  st.className='status'; st.style.display='block'; st.textContent='Sending test row…';
+  try{
+    await postRecords([{record_id:'test-'+Date.now(),submitted_at:new Date().toISOString(),patient_id:'__TEST__',operator:'setup-check'}]);
+    st.className='status ok'; st.textContent='✓ Success — check your sheet for a __TEST__ row.';
+  }catch(err){ st.className='status err'; st.textContent='✗ '+({['no-endpoint']:'No URL set','bad-response':'Got a non-JSON reply — re-check the deployment (Anyone access).'}[err.message]||err.message); }
+};
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+let toastTimer;
+function toast(kind,msg){
+  const t=document.getElementById('toast');
+  t.className='toast '+kind+' show';
+  document.getElementById('toastIc').textContent=kind==='good'?'✓':kind==='warn'?'!':'✕';
+  document.getElementById('toastMsg').textContent=msg;
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+/* ============================================================
+   NET STATUS + WIRING
+   ============================================================ */
+function updateNet(){
+  const on=navigator.onLine;
+  const net=document.getElementById('net');
+  net.classList.toggle('off',!on);
+  document.getElementById('netTxt').textContent=on?'online':'offline';
+  if(on) syncQueue(true);
+}
+window.addEventListener('online',updateNet);
+window.addEventListener('offline',updateNet);
+document.getElementById('saveBtn').onclick=saveRecord;
+document.getElementById('syncBtn').onclick=()=>syncQueue(false);
+document.getElementById('clearBtn').onclick=()=>{ if(confirm('Clear the current record? Queued/saved records are not affected.')) resetForm(); };
+window.addEventListener('beforeunload',e=>{ if(countableFilled()>0){ e.preventDefault(); e.returnValue=''; } });
+
+// default scan date = today
+document.getElementById('m_date').value=new Date().toISOString().slice(0,10);
+// restore endpoint into memory store on load
+if(store.get('fdg_endpoint')===null && mem.fdg_endpoint) store.set('fdg_endpoint',mem.fdg_endpoint);
+
+renderNav(); renderSection(); onChange(); refreshQueueUI(); updateNet();
+
+/* service worker (only works when hosted over http/https) */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>

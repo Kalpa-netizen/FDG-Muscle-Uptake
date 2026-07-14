@@ -297,17 +297,13 @@ input.num{padding-right:52px}
   <div class="modal">
     <div class="mh"><span>⚙</span><h3>Connect your Google Sheet</h3></div>
     <div class="mb">
-      <p>Paste the Web App URL from your Apps Script deployment, then your personal access key. Setup steps are in <code>README.md</code>.</p>
+      <p>Paste the Web App URL from your Apps Script deployment. Records POST straight into the sheet — no keys, no accounts to wire up. Setup steps are in <code>README.md</code>.</p>
       <div class="field">
         <label>Apps Script Web App URL</label>
         <input id="endpoint" class="txt mono" placeholder="https://script.google.com/macros/s/AKfy.../exec" autocomplete="off"/>
       </div>
-      <div class="field">
-        <label>Access key <span class="hint">· issued by the study PI</span></label>
-        <input id="accesskey" class="txt mono" placeholder="e.g. KA-7F3Q-2ND8" autocomplete="off"/>
-      </div>
       <div id="testStatus" class="status"></div>
-      <p style="font-size:12px;color:var(--ink-faint)">Both are stored on this device only. Your key identifies your entries and can be revoked by the PI at any time.</p>
+      <p style="font-size:12px;color:var(--ink-faint)">The URL is stored on this device only. If storage is blocked (e.g. preview sandbox) it stays for this session.</p>
     </div>
     <div class="mf">
       <button class="btn ghost" id="testBtn">Send test row</button>
@@ -674,11 +670,10 @@ function refreshQueueUI(){
 async function postRecords(records){
   const url=store.get('fdg_endpoint');
   if(!url) throw new Error('no-endpoint');
-  const key=store.get('fdg_key')||'';
   const res=await fetch(url,{
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'},  // simple request → no CORS preflight
-    body:JSON.stringify({key,fields:orderedKeys(),records}),
+    body:JSON.stringify({fields:orderedKeys(),records}),
   });
   const txt=await res.text();
   let data; try{ data=JSON.parse(txt); }catch(e){ throw new Error('bad-response'); }
@@ -689,7 +684,7 @@ async function postRecords(records){
 async function saveRecord(){
   const pid=document.getElementById('m_pid').value.trim();
   if(!pid){ toast('warn','Enter a Patient / study ID first'); document.getElementById('m_pid').focus(); return; }
-  if(!store.get('fdg_endpoint')||!store.get('fdg_key')){ openSettings(); toast('warn','Add your Sheet URL and access key to save'); return; }
+  if(!store.get('fdg_endpoint')){ openSettings(); toast('warn','Connect your Google Sheet to save'); return; }
   const rec=buildRecord();
   const btn=document.getElementById('saveBtn'); btn.disabled=true; const orig=btn.innerHTML;
   btn.innerHTML='<span class="sp"></span>Saving';
@@ -699,14 +694,10 @@ async function saveRecord(){
     toast('good',`Saved ${pid} to sheet`);
     resetForm();
   }catch(err){
-    if(err.message==='unauthorized'){
-      // A rejected key won't fix itself by queuing — keep the record and prompt.
-      toast('err','Access key not recognised — check ⚙'); openSettings();
-    } else {
-      const q=getQueue(); q.push(rec); setQueue(q);
-      toast('warn', err.message==='offline'?`Offline — ${pid} queued`:`Couldn't reach sheet — ${pid} queued`);
-      resetForm();
-    }
+    const q=getQueue(); q.push(rec); setQueue(q);
+    if(err.message==='offline') toast('warn',`Offline — ${pid} queued`);
+    else toast('warn',`Couldn't reach sheet — ${pid} queued`);
+    resetForm();
   }finally{ btn.disabled=false; btn.innerHTML=orig; }
 }
 
@@ -720,10 +711,7 @@ async function syncQueue(silent){
     await postRecords(q);
     setQueue([]);
     toast('good',`Synced ${q.length} record${q.length>1?'s':''}`);
-  }catch(err){
-    if(err.message==='unauthorized'){ toast('err','Access key rejected — fix it in ⚙'); openSettings(); }
-    else if(!silent){ toast('err','Sync failed — will retry'); }
-  }
+  }catch(err){ if(!silent)toast('err','Sync failed — will retry'); }
   finally{ setTimeout(()=>{btn.style.transform='';},600); }
 }
 
@@ -741,35 +729,24 @@ function resetForm(){
    SETTINGS + TEST
    ============================================================ */
 const overlay=document.getElementById('overlay');
-function openSettings(){
-  document.getElementById('endpoint').value=store.get('fdg_endpoint')||'';
-  document.getElementById('accesskey').value=store.get('fdg_key')||'';
-  document.getElementById('testStatus').className='status'; overlay.classList.add('show');
-}
+function openSettings(){ document.getElementById('endpoint').value=store.get('fdg_endpoint')||''; document.getElementById('testStatus').className='status'; overlay.classList.add('show'); }
 document.getElementById('setBtn').onclick=openSettings;
 overlay.onclick=e=>{ if(e.target===overlay) overlay.classList.remove('show'); };
 document.getElementById('saveEndpoint').onclick=()=>{
   const v=document.getElementById('endpoint').value.trim();
-  const k=document.getElementById('accesskey').value.trim();
-  store.set('fdg_endpoint',v); store.set('fdg_key',k); overlay.classList.remove('show');
-  toast('good', (v&&k)?'Connected':'Settings saved');
+  store.set('fdg_endpoint',v); overlay.classList.remove('show');
+  toast('good', v?'Sheet connected':'Endpoint cleared');
 };
 document.getElementById('testBtn').onclick=async()=>{
   const v=document.getElementById('endpoint').value.trim();
-  const k=document.getElementById('accesskey').value.trim();
   const st=document.getElementById('testStatus');
   if(!v){ st.className='status err'; st.textContent='Paste a URL first.'; return; }
-  if(!k){ st.className='status err'; st.textContent='Enter your access key first.'; return; }
-  store.set('fdg_endpoint',v); store.set('fdg_key',k);
+  store.set('fdg_endpoint',v);
   st.className='status'; st.style.display='block'; st.textContent='Sending test row…';
   try{
     await postRecords([{record_id:'test-'+Date.now(),submitted_at:new Date().toISOString(),patient_id:'__TEST__',operator:'setup-check'}]);
-    st.className='status ok'; st.textContent='✓ Success — your key works. Check the sheet for a __TEST__ row.';
-  }catch(err){ st.className='status err'; st.textContent='✗ '+({
-    'no-endpoint':'No URL set',
-    'unauthorized':'Key not recognised — ask the PI to add it to the Access tab.',
-    'bad-response':'Got a non-JSON reply — re-check the deployment (Anyone access).'
-  }[err.message]||err.message); }
+    st.className='status ok'; st.textContent='✓ Success — check your sheet for a __TEST__ row.';
+  }catch(err){ st.className='status err'; st.textContent='✗ '+({['no-endpoint']:'No URL set','bad-response':'Got a non-JSON reply — re-check the deployment (Anyone access).'}[err.message]||err.message); }
 };
 
 /* ============================================================

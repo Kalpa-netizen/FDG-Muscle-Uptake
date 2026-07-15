@@ -246,43 +246,6 @@ input.num{padding-right:52px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 :focus-visible{outline:2px solid var(--hot);outline-offset:2px}
-
-/* edit mode */
-.editbar{display:none;align-items:center;gap:12px;margin:0 0 18px;padding:11px 14px;border-radius:11px;
-  border:1px solid var(--hot);background:linear-gradient(90deg,rgba(247,127,32,.14),rgba(247,127,32,.03))}
-.editbar.show{display:flex}
-.editbar .ico{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:var(--hot);color:#160a04;font-size:13px;flex:none}
-.editbar .t{font-size:13.5px;color:var(--ink)}
-.editbar .t b{font-family:"IBM Plex Mono",monospace}
-.editbar .who{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-faint)}
-.editbar button{margin-left:auto;border:1px solid var(--line);background:var(--panel-2);color:var(--ink-dim);
-  border-radius:8px;padding:7px 12px;font-family:"IBM Plex Sans";font-size:12.5px;cursor:pointer}
-.editbar button:hover{color:var(--ink);border-color:#33425c}
-
-/* lookup results */
-.lookup-results{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow:auto}
-.lookup-row{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:10px;padding:11px 13px;background:var(--panel-2);cursor:pointer;text-align:left}
-.lookup-row:hover{border-color:var(--hot);background:var(--field-focus)}
-.lookup-row .pid{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--ink);font-weight:500}
-.lookup-row .meta2{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink-faint);margin-top:2px}
-.lookup-row .go{margin-left:auto;color:var(--hot);font-size:16px}
-
-/* findings list */
-.findings{display:flex;flex-direction:column;gap:14px}
-.find-empty{border:1px dashed var(--line);border-radius:12px;padding:22px;text-align:center;color:var(--ink-faint);font-size:13px;background:var(--panel-2)}
-.find-card{border:1px solid var(--line);border-radius:13px;background:var(--panel-2);overflow:hidden}
-.find-head{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line-soft);background:linear-gradient(90deg,rgba(247,127,32,.06),transparent)}
-.find-n{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--hot)}
-.find-del{margin-left:auto;width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--field);color:var(--ink-faint);cursor:pointer;font-size:12px}
-.find-del:hover{color:var(--bad);border-color:var(--bad)}
-.find-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 16px;padding:14px}
-.seg3{display:flex;flex-wrap:wrap;gap:8px}
-.seg3 button{flex:1;min-width:120px;border:1px solid var(--line);background:var(--field);color:var(--ink-dim);border-radius:9px;padding:10px 8px;font-family:"IBM Plex Sans";font-size:12.5px;cursor:pointer;transition:border-color .12s,background .12s}
-.seg3 button[aria-pressed="true"]{border-color:var(--hot);color:var(--ink);background:linear-gradient(180deg,rgba(247,127,32,.18),rgba(247,127,32,.04))}
-.find-add{align-self:flex-start;border:1px solid var(--hot);background:linear-gradient(180deg,rgba(247,127,32,.14),rgba(247,127,32,.03));color:var(--hot);
-  border-radius:10px;padding:11px 18px;font-family:"Space Grotesk";font-weight:600;font-size:13.5px;cursor:pointer}
-.find-add:hover{background:linear-gradient(180deg,rgba(247,127,32,.24),rgba(247,127,32,.06))}
-@media (max-width:860px){.find-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -298,7 +261,6 @@ input.num{padding-right:52px}
       </div>
       <div class="top-actions">
         <div class="net" id="net" title="Connection & queue"><span class="dot"></span><span id="netTxt">online</span><span class="q" id="qBadge"></span></div>
-        <button class="iconbtn" id="findBtn" title="Find / edit a record">🔍</button>
         <button class="iconbtn" id="syncBtn" title="Sync queued records">⟳</button>
         <button class="iconbtn" id="setBtn" title="Google Sheet setup">⚙</button>
       </div>
@@ -314,7 +276,7 @@ input.num{padding-right:52px}
     <nav class="rail" id="rail"><div class="eyebrow">Sections</div></nav>
     <div style="min-width:0">
       <div class="stepper" id="stepper"></div>
-      <main class="stage"><div id="editBar" class="editbar"></div><div id="sectionHost"></div></main>
+      <main class="stage"><div id="sectionHost"></div></main>
     </div>
   </div>
 </div>
@@ -330,6 +292,7 @@ input.num{padding-right:52px}
   </div>
 </div>
 
+<!-- settings modal -->
 <div class="overlay" id="overlay">
   <div class="modal">
     <div class="mh"><span>⚙</span><h3>Connect your Google Sheet</h3></div>
@@ -349,26 +312,6 @@ input.num{padding-right:52px}
     <div class="mf">
       <button class="btn ghost" id="testBtn">Send test row</button>
       <button class="btn primary" id="saveEndpoint">Save</button>
-    </div>
-  </div>
-</div>
-
-<!-- lookup / edit modal -->
-<div class="overlay" id="lookupOverlay">
-  <div class="modal">
-    <div class="mh"><span>🔍</span><h3>Find a record to edit</h3></div>
-    <div class="mb">
-      <p>Enter a Patient / study ID to pull its record back into the form. Edits overwrite that record in the sheet; the original submit time and author are kept.</p>
-      <div class="field">
-        <label>Patient / study ID</label>
-        <input id="lookupPid" class="txt mono" placeholder="e.g. FDG-0042" autocomplete="off"/>
-      </div>
-      <div id="lookupStatus" class="status"></div>
-      <div id="lookupResults" class="lookup-results"></div>
-    </div>
-    <div class="mf">
-      <button class="btn ghost" id="lookupCancel">Cancel</button>
-      <button class="btn primary" id="lookupFind">Find</button>
     </div>
   </div>
 </div>
@@ -439,9 +382,28 @@ const SECTIONS = [
       {k:'albumin',l:'Albumin',t:'num',u:'g/dL'},
       {k:'hb',l:'Haemoglobin',t:'num',u:'g/dL'},
     ]},
-  { id:'findings', name:'Uptake findings', desc:'Add each site with muscular FDG uptake — name the muscle, pick the region, and record the laterality of the uptake.', kind:'findings',
-    regions:['Head & neck','Shoulder / upper arm','Forearm / hand','Chest','Abdomen','Back / paraspinal','Pelvis / gluteal','Thigh','Leg / calf','Other'],
-    laterality:['Unilateral','Bilateral — symmetric','Bilateral — asymmetric'] },
+  { id:'img', name:'Imaging & body comp', desc:'CT-derived muscle quantity and quality (sarcopenia / myosteatosis).',
+    fields:[
+      {k:'ct_hu',l:'CT muscle attenuation',t:'num',u:'HU'},
+      {k:'csa',l:'Muscle cross-sectional area',t:'num',u:'cm²'},
+      {k:'edema',l:'Muscle edema',t:YN},
+      {k:'atrophy',l:'Muscle atrophy',t:YN},
+      {k:'smi_l3',l:'Skeletal muscle index (L3)',t:'num',u:'cm²/m²'},
+      {k:'psoas_area',l:'Psoas muscle area',t:'num',u:'cm²'},
+      {k:'imf',l:'Intramuscular fat (myosteatosis)',t:'num',u:'HU'},
+      {k:'vfa',l:'Visceral fat area',t:'num',u:'cm²'},
+      {k:'sfa',l:'Subcutaneous fat area',t:'num',u:'cm²'},
+    ]},
+  { id:'muscles', name:'Muscle grading', desc:'Grade each muscle against liver reference (0–3). Leave blank if not assessed.', kind:'muscles',
+    regions:[
+      ['Upper limb',['Deltoid','Biceps brachii','Triceps']],
+      ['Neck',['Sternocleidomastoid','Trapezius']],
+      ['Thorax',['Pectoralis major','Intercostals']],
+      ['Abdomen',['Rectus abdominis','Oblique muscles']],
+      ['Back',['Erector spinae','Multifidus','Quadratus lumborum']],
+      ['Pelvis',['Gluteus maximus','Gluteus medius','Iliopsoas']],
+      ['Lower limb',['Quadriceps','Hamstrings','Adductors','Tibialis anterior','Gastrocnemius','Soleus']],
+    ]},
   { id:'uptake', name:'Uptake pattern', desc:'Overall visual read and pattern classification.', kind:'uptake',
     fields:[
       {k:'pattern',l:'Uptake pattern category',t:'sel',wide:true,o:[
@@ -476,31 +438,18 @@ const store = {
 
 /* ---------- state ---------- */
 const state = {};          // key -> value
-let findings = [];         // [{region, muscle, laterality, grade}]
+const muscles = {};        // muscleKey -> grade
 let activeSection = SECTIONS[0].id;
 let visualGrade = null;
-let editingRecordId = null;   // set when editing an existing record
 
-function newFinding(){ return {region:'', muscle:'', laterality:'', grade:''}; }
-function cleanFindings(){
-  return findings
-    .filter(f=>(f.muscle&&f.muscle.trim())||f.region||f.laterality||(f.grade!==''&&f.grade!=null))
-    .map(f=>({region:f.region||'',muscle:(f.muscle||'').trim(),laterality:f.laterality||'',grade:(f.grade===''||f.grade==null)?'':+f.grade}));
-}
-function findingsSummary(){
-  return cleanFindings().map(f=>{
-    let s=(f.muscle||'?'); if(f.region)s+=' ('+f.region+')';
-    if(f.laterality)s+=' — '+f.laterality; if(f.grade!==''&&f.grade!=null)s+=' · G'+f.grade;
-    return s;
-  }).join('; ');
-}
+function muscleKey(name){ return 'm_'+name.toLowerCase().replace(/[^a-z]+/g,'_').replace(/^_|_$/g,''); }
 
 /* flat, ordered list of all data keys for the sheet header */
 function orderedKeys(){
   const keys = ['record_id','submitted_at','patient_id','scan_date','operator'];
   for(const s of SECTIONS){
     if(s.kind==='exclusion'){ s.fields.forEach(([k])=>keys.push(k)); keys.push('is_excluded'); }
-    else if(s.kind==='findings'){ keys.push('findings_count','findings_summary'); }
+    else if(s.kind==='muscles'){ s.regions.forEach(([,ms])=>ms.forEach(m=>keys.push(muscleKey(m)))); }
     else { s.fields.forEach(f=>keys.push(f.k)); if(s.id==='uptake') keys.push('visual_grade'); }
   }
   return keys;
@@ -599,38 +548,30 @@ function renderSection(){
     host.innerHTML='';host.appendChild(el);updateExclBanner();return;
   }
 
-  if(s.kind==='findings'){
-    const wrap=document.createElement('div'); wrap.className='findings';
-    if(!findings.length){
-      const empty=document.createElement('div'); empty.className='find-empty';
-      empty.textContent='No uptake findings yet. Add one for each muscle/site showing FDG uptake.';
-      wrap.appendChild(empty);
-    }
-    findings.forEach((f,i)=>{
-      const card=document.createElement('div'); card.className='find-card';
-      card.innerHTML=`
-        <div class="find-head"><span class="find-n">Finding ${i+1}</span><button class="find-del" title="Remove">✕</button></div>
-        <div class="find-grid">
-          <div class="field"><label>Muscle name</label><div class="control"><input class="txt f-muscle" type="text" placeholder="e.g. Deltoid" value="${(f.muscle||'').replace(/"/g,'&quot;')}" autocomplete="off"/></div></div>
-          <div class="field"><label>Region / site</label><div class="control"><select class="txt f-region"><option value="">—</option>${s.regions.map(r=>`<option ${f.region===r?'selected':''}>${r}</option>`).join('')}</select></div></div>
-          <div class="field wide"><label>Laterality of uptake</label><div class="seg3">${s.laterality.map(l=>`<button class="f-lat" data-v="${l}" aria-pressed="${f.laterality===l}">${l}</button>`).join('')}</div></div>
-          <div class="field"><label>Intensity vs liver <span class="hint">· optional</span></label><div class="control"><select class="txt f-grade"><option value="">—</option>${[0,1,2,3].map(g=>`<option value="${g}" ${String(f.grade)===String(g)?'selected':''}>Grade ${g}</option>`).join('')}</select></div></div>
-        </div>`;
-      card.querySelector('.f-muscle').addEventListener('input',e=>{f.muscle=e.target.value;onChange();});
-      card.querySelector('.f-region').addEventListener('change',e=>{f.region=e.target.value;onChange();});
-      card.querySelector('.f-grade').addEventListener('change',e=>{f.grade=e.target.value;onChange();});
-      card.querySelectorAll('.f-lat').forEach(b=>b.onclick=()=>{
-        f.laterality = f.laterality===b.dataset.v?'':b.dataset.v;
-        card.querySelectorAll('.f-lat').forEach(x=>x.setAttribute('aria-pressed',f.laterality===x.dataset.v));
-        onChange();
+  if(s.kind==='muscles'){
+    s.regions.forEach(([region,ms])=>{
+      const det=document.createElement('details');det.className='region';det.open=false;
+      const setCount=ms.filter(m=>muscles[muscleKey(m)]!=null).length;
+      det.innerHTML=`<summary>${region}<span class="rcount" data-region="${region}">${setCount}/${ms.length}</span><span class="chev">▸</span></summary>`;
+      ms.forEach(m=>{
+        const mk=muscleKey(m);
+        const row=document.createElement('div');row.className='mrow'+(muscles[mk]!=null?' set':'');
+        row.innerHTML=`<span class="mname">${m}</span>
+          <div class="mgrade" data-m="${mk}">${[0,1,2,3].map(v=>`<button data-v="${v}" aria-pressed="${muscles[mk]===v}">${v}</button>`).join('')}</div>`;
+        row.querySelectorAll('button').forEach(btn=>{
+          btn.onclick=()=>{
+            const v=+btn.dataset.v;
+            muscles[mk]= muscles[mk]===v?undefined:v;
+            row.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',muscles[mk]===+b.dataset.v));
+            row.classList.toggle('set',muscles[mk]!=null);
+            det.querySelector(`[data-region="${region}"]`).textContent=`${ms.filter(x=>muscles[muscleKey(x)]!=null).length}/${ms.length}`;
+            onChange();
+          };
+        });
+        det.appendChild(row);
       });
-      card.querySelector('.find-del').onclick=()=>{ findings.splice(i,1); renderSection(); onChange(); };
-      wrap.appendChild(card);
+      el.appendChild(det);
     });
-    const add=document.createElement('button'); add.className='find-add'; add.innerHTML='＋ Add finding';
-    add.onclick=()=>{ findings.push(newFinding()); renderSection(); onChange(); };
-    wrap.appendChild(add);
-    el.appendChild(wrap);
     host.innerHTML='';host.appendChild(el);return;
   }
 
@@ -663,7 +604,7 @@ function updateExclBanner(){
    ============================================================ */
 function sectionFilled(s){
   if(s.kind==='exclusion') return true; // optional gate
-  if(s.kind==='findings') return cleanFindings().length>0;
+  if(s.kind==='muscles') return Object.values(muscles).some(v=>v!=null);
   let has=false;
   s.fields.forEach(f=>{ if(state[f.k]!=null && state[f.k]!=='') has=true; });
   if(s.id==='uptake' && visualGrade!=null) has=true;
@@ -681,12 +622,12 @@ function updateTicks(){
 }
 function countableTotal(){
   let n=0;
-  SECTIONS.forEach(s=>{ if(s.kind==='exclusion'||s.kind==='findings')return; s.fields.forEach(()=>n++); if(s.id==='uptake')n++; });
+  SECTIONS.forEach(s=>{ if(s.kind==='exclusion'||s.kind==='muscles')return; s.fields.forEach(()=>n++); if(s.id==='uptake')n++; });
   return n;
 }
 function countableFilled(){
   let n=0;
-  SECTIONS.forEach(s=>{ if(s.kind==='exclusion'||s.kind==='findings')return;
+  SECTIONS.forEach(s=>{ if(s.kind==='exclusion'||s.kind==='muscles')return;
     s.fields.forEach(f=>{ if(state[f.k]!=null&&state[f.k]!=='')n++; });
     if(s.id==='uptake'&&visualGrade!=null)n++; });
   return n;
@@ -696,8 +637,8 @@ function onChange(){
   const pct=Math.round(filled/total*100);
   document.getElementById('progFill').style.width=pct+'%';
   document.getElementById('progPct').textContent=pct+'%';
-  const fset=cleanFindings().length;
-  document.getElementById('progCount').textContent=`${filled}/${total} fields · ${fset} finding${fset===1?'':'s'}`;
+  const mset=Object.values(muscles).filter(v=>v!=null).length;
+  document.getElementById('progCount').textContent=`${filled}/${total} fields · ${mset} muscles`;
   updateTicks();
 }
 
@@ -715,10 +656,9 @@ function buildRecord(){
   SECTIONS.forEach(s=>{
     if(s.kind==='exclusion'){ s.fields.forEach(([k])=>rec[k]=state[k]==='Yes'?'Yes':'No');
       rec.is_excluded=s.fields.some(([k])=>state[k]==='Yes')?'Yes':'No'; }
-    else if(s.kind==='findings'){ const cf=cleanFindings(); rec.findings_count=cf.length; rec.findings_summary=findingsSummary(); }
+    else if(s.kind==='muscles'){ s.regions.forEach(([,ms])=>ms.forEach(m=>{const mk=muscleKey(m);rec[mk]=muscles[mk]!=null?muscles[mk]:'';})); }
     else { s.fields.forEach(f=>rec[f.k]=state[f.k]!=null?state[f.k]:''); if(s.id==='uptake')rec.visual_grade=visualGrade!=null?visualGrade:''; }
   });
-  rec._findings=cleanFindings();   // travels with the record; server writes these to the Findings tab
   return rec;
 }
 
@@ -731,26 +671,20 @@ function refreshQueueUI(){
   document.getElementById('syncBtn').style.color=n?'var(--hot)':'';
 }
 
-async function api(body){
+async function postRecords(records){
   const url=store.get('fdg_endpoint');
   if(!url) throw new Error('no-endpoint');
   const key=store.get('fdg_key')||'';
   const res=await fetch(url,{
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'},  // simple request → no CORS preflight
-    body:JSON.stringify(Object.assign({key},body)),
+    body:JSON.stringify({key,fields:orderedKeys(),records}),
   });
   const txt=await res.text();
   let data; try{ data=JSON.parse(txt); }catch(e){ throw new Error('bad-response'); }
   if(!data.ok) throw new Error(data.error||'server-error');
   return data;
 }
-// append (used by save + offline queue sync)
-function postRecords(records){ return api({action:'save',fields:orderedKeys(),records}); }
-// fetch records by patient id
-function lookupRecords(pid){ return api({action:'lookup',patient_id:pid}); }
-// overwrite an existing record in place
-function updateRecord(rid,rec){ return api({action:'update',record_id:rid,fields:orderedKeys(),records:[rec]}); }
 
 async function saveRecord(){
   const pid=document.getElementById('m_pid').value.trim();
@@ -758,25 +692,6 @@ async function saveRecord(){
   if(!store.get('fdg_endpoint')||!store.get('fdg_key')){ openSettings(); toast('warn','Add your Sheet URL and access key to save'); return; }
   const rec=buildRecord();
   const btn=document.getElementById('saveBtn'); btn.disabled=true; const orig=btn.innerHTML;
-
-  // --- editing an existing record: update in place (needs a connection) ---
-  if(editingRecordId){
-    btn.innerHTML='<span class="sp"></span>Updating';
-    try{
-      if(!navigator.onLine) throw new Error('offline-edit');
-      await updateRecord(editingRecordId,rec);
-      toast('good',`Updated ${pid}`);
-      exitEditMode(); resetForm();
-    }catch(err){
-      if(err.message==='offline-edit') toast('warn','Editing needs a connection — try again when online');
-      else if(err.message==='unauthorized'){ toast('err','Access key not recognised — check ⚙'); openSettings(); }
-      else if(err.message==='not-found') toast('err','That record no longer exists in the sheet');
-      else toast('err','Update failed — nothing changed');
-    }finally{ btn.disabled=false; refreshSaveButton(); }
-    return;
-  }
-
-  // --- new record: append, with offline queue ---
   btn.innerHTML='<span class="sp"></span>Saving';
   try{
     if(!navigator.onLine) throw new Error('offline');
@@ -785,13 +700,14 @@ async function saveRecord(){
     resetForm();
   }catch(err){
     if(err.message==='unauthorized'){
+      // A rejected key won't fix itself by queuing — keep the record and prompt.
       toast('err','Access key not recognised — check ⚙'); openSettings();
     } else {
       const q=getQueue(); q.push(rec); setQueue(q);
       toast('warn', err.message==='offline'?`Offline — ${pid} queued`:`Couldn't reach sheet — ${pid} queued`);
       resetForm();
     }
-  }finally{ btn.disabled=false; refreshSaveButton(); }
+  }finally{ btn.disabled=false; btn.innerHTML=orig; }
 }
 
 async function syncQueue(silent){
@@ -813,94 +729,12 @@ async function syncQueue(silent){
 
 function resetForm(){
   for(const k in state) delete state[k];
-  findings=[];
+  for(const k in muscles) delete muscles[k];
   visualGrade=null;
   document.getElementById('m_pid').value='';
   // keep operator + date for the next patient
   activeSection=SECTIONS[0].id;
   renderNav();renderSection();onChange();
-  refreshSaveButton();
-}
-
-function refreshSaveButton(){
-  document.getElementById('saveBtn').innerHTML = editingRecordId ? 'Update record' : 'Save record';
-}
-
-/* ---------- two-way edit ---------- */
-function loadRecord(rec){
-  for(const k in state) delete state[k];
-  findings=[];
-  visualGrade=null;
-  document.getElementById('m_pid').value = rec.patient_id!=null?rec.patient_id:'';
-  if(rec.scan_date) document.getElementById('m_date').value = String(rec.scan_date).slice(0,10);
-  if(rec.operator!=null && rec.operator!=='') document.getElementById('m_op').value = rec.operator;
-  const val = v => (v===''||v==null) ? undefined : v;
-  SECTIONS.forEach(s=>{
-    if(s.kind==='exclusion'){ s.fields.forEach(([k])=>{ state[k]=(rec[k]==='Yes')?'Yes':undefined; }); }
-    else if(s.kind==='findings'){ findings=Array.isArray(rec.findings)?rec.findings.map(x=>({region:x.region||'',muscle:x.muscle||'',laterality:x.laterality||'',grade:(x.grade===''||x.grade==null)?'':x.grade})):[]; }
-    else { s.fields.forEach(f=>{ state[f.k]=val(rec[f.k]); }); if(s.id==='uptake'){ const g=rec.visual_grade; visualGrade=(g===''||g==null)?null:+g; } }
-  });
-  editingRecordId = rec.record_id || null;
-  activeSection=SECTIONS[0].id;
-  renderNav(); renderSection(); onChange(); renderEditBar(rec);
-}
-
-function renderEditBar(rec){
-  const bar=document.getElementById('editBar');
-  if(editingRecordId){
-    const who = rec && rec.authorized_as ? 'entered by '+rec.authorized_as : '';
-    const when = rec && rec.submitted_at ? new Date(rec.submitted_at).toLocaleString() : '';
-    bar.innerHTML='<span class="ico">✎</span><span class="t">Editing record <b>'+((rec&&rec.patient_id)||'')+'</b> <span class="who">'+[who,when].filter(Boolean).join(' · ')+'</span></span><button id="cancelEdit">Cancel edit</button>';
-    bar.classList.add('show');
-    bar.querySelector('#cancelEdit').onclick=()=>{ exitEditMode(); resetForm(); toast('good','Back to a new record'); };
-  } else {
-    bar.classList.remove('show'); bar.innerHTML='';
-  }
-  refreshSaveButton();
-}
-function exitEditMode(){ editingRecordId=null; renderEditBar(null); }
-
-/* ---------- lookup modal ---------- */
-const lookupOverlay=document.getElementById('lookupOverlay');
-document.getElementById('findBtn').onclick=()=>{
-  if(!store.get('fdg_endpoint')||!store.get('fdg_key')){ openSettings(); toast('warn','Add your Sheet URL and access key first'); return; }
-  document.getElementById('lookupPid').value=document.getElementById('m_pid').value.trim();
-  document.getElementById('lookupResults').innerHTML='';
-  const st=document.getElementById('lookupStatus'); st.className='status'; st.style.display='none';
-  lookupOverlay.classList.add('show');
-  setTimeout(()=>document.getElementById('lookupPid').focus(),50);
-};
-lookupOverlay.onclick=e=>{ if(e.target===lookupOverlay) lookupOverlay.classList.remove('show'); };
-document.getElementById('lookupCancel').onclick=()=>lookupOverlay.classList.remove('show');
-document.getElementById('lookupPid').addEventListener('keydown',e=>{ if(e.key==='Enter') doLookup(); });
-document.getElementById('lookupFind').onclick=doLookup;
-
-async function doLookup(){
-  const pid=document.getElementById('lookupPid').value.trim();
-  const st=document.getElementById('lookupStatus'); const box=document.getElementById('lookupResults');
-  box.innerHTML='';
-  if(!pid){ st.className='status err'; st.style.display='block'; st.textContent='Enter a Patient / study ID.'; return; }
-  if(!navigator.onLine){ st.className='status err'; st.style.display='block'; st.textContent='Finding a record needs a connection.'; return; }
-  st.className='status'; st.style.display='block'; st.textContent='Searching…';
-  try{
-    const data=await lookupRecords(pid);
-    const recs=data.records||[];
-    if(!recs.length){ st.className='status err'; st.textContent='No record found for "'+pid+'".'; return; }
-    st.style.display='none';
-    recs.sort((a,b)=>String(b.submitted_at||'').localeCompare(String(a.submitted_at||'')));
-    recs.forEach(r=>{
-      const row=document.createElement('button'); row.className='lookup-row';
-      const when=r.submitted_at?new Date(r.submitted_at).toLocaleString():'';
-      const bits=[r.scan_date?('scan '+String(r.scan_date).slice(0,10)):'', r.operator?('op '+r.operator):'', r.authorized_as||''].filter(Boolean).join(' · ');
-      row.innerHTML='<div><div class="pid">'+(r.patient_id||pid)+'</div><div class="meta2">'+[bits,when].filter(Boolean).join('  |  ')+'</div></div><span class="go">→</span>';
-      row.onclick=()=>{ lookupOverlay.classList.remove('show'); loadRecord(r); toast('good','Loaded '+(r.patient_id||pid)+' for editing'); window.scrollTo({top:0,behavior:'smooth'}); };
-      box.appendChild(row);
-    });
-    if(recs.length>1){ st.className='status'; st.style.display='block'; st.textContent=recs.length+' records share this ID — pick one.'; }
-  }catch(err){
-    st.className='status err'; st.style.display='block';
-    st.textContent='✗ '+({'unauthorized':'Access key not recognised — check ⚙.','bad-response':'Unexpected reply — re-check the deployment.'}[err.message]||err.message);
-  }
 }
 
 /* ============================================================
@@ -964,7 +798,7 @@ window.addEventListener('online',updateNet);
 window.addEventListener('offline',updateNet);
 document.getElementById('saveBtn').onclick=saveRecord;
 document.getElementById('syncBtn').onclick=()=>syncQueue(false);
-document.getElementById('clearBtn').onclick=()=>{ if(confirm('Clear the current record? Queued/saved records are not affected.')){ exitEditMode(); resetForm(); } };
+document.getElementById('clearBtn').onclick=()=>{ if(confirm('Clear the current record? Queued/saved records are not affected.')) resetForm(); };
 window.addEventListener('beforeunload',e=>{ if(countableFilled()>0){ e.preventDefault(); e.returnValue=''; } });
 
 // default scan date = today

@@ -114,7 +114,7 @@ header.top{
 .iconbtn:hover{color:var(--ink);border-color:#31405a}
 
 /* meta strip */
-.meta{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+.meta{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
 .meta .cell{background:var(--bg);padding:10px 20px;display:flex;flex-direction:column;gap:3px}
 .meta label{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
 .meta input{background:transparent;border:0;color:var(--ink);font-family:"IBM Plex Mono",monospace;font-size:14px;padding:2px 0;outline:none}
@@ -124,8 +124,8 @@ header.top{
 .body{display:grid;grid-template-columns:236px 1fr;flex:1;min-height:0}
 nav.rail{border-right:1px solid var(--line);padding:14px 12px;position:sticky;top:126px;align-self:start;height:calc(100vh - 126px);overflow:auto}
 .rail .eyebrow{padding:6px 10px 10px}
-.navitem{display:flex;align-items:center;gap:11px;width:100%;text-align:left;border:0;background:transparent;color:var(--ink-dim);
-  font-family:"IBM Plex Sans";font-size:13.5px;padding:9px 10px;border-radius:9px;cursor:pointer;position:relative}
+.navitem{display:flex;align-items:center;gap:11px;width:100%;text-align:left;border:0;background:transparent;color:var(--ink);
+  font-family:"IBM Plex Sans";font-size:15.5px;font-weight:500;padding:10px 10px;border-radius:9px;cursor:pointer;position:relative}
 .navitem:hover{background:var(--panel-2);color:var(--ink)}
 .navitem.active{background:linear-gradient(90deg, rgba(247,127,32,.14), rgba(247,127,32,.02));color:var(--ink)}
 .navitem.active::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:linear-gradient(var(--iron-3),var(--iron-2))}
@@ -162,6 +162,8 @@ select.txt{appearance:none;cursor:pointer;background-image:linear-gradient(45deg
   background-position:calc(100% - 18px) 18px,calc(100% - 13px) 18px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:34px}
 .unit{position:absolute;right:12px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-faint);pointer-events:none}
 input.num{padding-right:52px}
+input.calc{color:var(--hot);cursor:default;background:var(--panel-2)}
+input.calc::placeholder{color:var(--ink-faint)}
 
 /* segmented yes/no/unknown */
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;background:var(--field)}
@@ -332,7 +334,8 @@ input.num{padding-right:52px}
       </div>
     </div>
     <div class="meta">
-      <div class="cell"><label>Patient / study ID</label><input id="m_pid" class="mono" placeholder="e.g. FDG-0042" autocomplete="off"/></div>
+      <div class="cell"><label>Patient name</label><input id="m_name" class="mono" placeholder="name" autocomplete="off"/></div>
+      <div class="cell"><label>Study ID</label><input id="m_pid" class="mono" placeholder="e.g. FDG-0042" autocomplete="off"/></div>
       <div class="cell"><label>Scan date</label><input id="m_date" class="mono" type="date"/></div>
       <div class="cell"><label>Operator</label><input id="m_op" class="mono" placeholder="initials" autocomplete="off"/></div>
     </div>
@@ -418,12 +421,13 @@ const SECTIONS = [
       ['ex_surgery','Recent surgery'],['ex_brownfat','Brown fat into muscle'],
       ['ex_dm_uncontrolled','Uncontrolled diabetes'],['ex_hyperglyc','Severe hyperglycaemia >200 mg/dL'],
     ]},
-  { id:'demo', name:'Demographics', desc:'Baseline body variables used for SUV normalisation.',
+  { id:'demo', name:'Demographics', desc:'Baseline body variables used for SUV normalisation. BMI is calculated from weight and height.',
     fields:[
       {k:'age',l:'Age',t:'num',u:'yr'},
       {k:'sex',l:'Sex',t:'sel',o:['Male','Female','Other']},
       {k:'weight',l:'Weight',t:'num',u:'kg'},
-      {k:'bmi',l:'BMI',t:'num',u:'kg/m²'},
+      {k:'height',l:'Height',t:'num',u:'cm'},
+      {k:'bmi',l:'BMI',t:'num',u:'kg/m²',calc:true,hint:'auto'},
     ]},
   { id:'clin', name:'Clinical status', desc:'Diagnosis, functional scores and drivers of immobilisation.',
     fields:[
@@ -470,15 +474,6 @@ const SECTIONS = [
   { id:'findings', name:'Uptake findings', desc:'Add each site with muscular FDG uptake — name the muscle, pick the region, and record the laterality of the uptake.', kind:'findings',
     regions:['Head & neck','Shoulder / upper arm','Forearm / hand','Chest','Abdomen','Back / paraspinal','Pelvis / gluteal','Thigh','Leg / calf','Other'],
     laterality:['Unilateral','Bilateral — symmetric','Bilateral — asymmetric'] },
-  { id:'out', name:'Outcomes', desc:'Quantitative read-outs — the study endpoints.',
-    fields:[
-      {k:'suvmax',l:'SUVmax',t:'num'},
-      {k:'suvmean',l:'SUVmean',t:'num',hint:'preferred endpoint'},
-      {k:'muscle_liver_ratio',l:'Muscle-to-liver ratio',t:'num',hint:'better normalisation'},
-      {k:'metabolic_volume',l:'Metabolic muscle volume',t:'num',u:'cm³'},
-      {k:'n_muscles',l:'Number of muscles involved',t:'num'},
-      {k:'notes',l:'Notes',t:'area',wide:true,ph:'Free-text observations'},
-    ]},
 ];
 
 const GRADE_REF = [
@@ -502,16 +497,20 @@ let activeSection = SECTIONS[0].id;
 let visualGrade = null;
 let editingRecordId = null;   // set when editing an existing record
 
-function newFinding(){ return {region:'', muscle:'', laterality:'', grade:''}; }
+function newFinding(){ return {region:'', muscle:'', laterality:'', grade:'', suvmax:'', mlr:''}; }
 function cleanFindings(){
   return findings
-    .filter(f=>(f.muscle&&f.muscle.trim())||f.region||f.laterality||(f.grade!==''&&f.grade!=null))
-    .map(f=>({region:f.region||'',muscle:(f.muscle||'').trim(),laterality:f.laterality||'',grade:(f.grade===''||f.grade==null)?'':+f.grade}));
+    .filter(f=>(f.muscle&&f.muscle.trim())||f.region||f.laterality||(f.grade!==''&&f.grade!=null)||(f.suvmax!==''&&f.suvmax!=null)||(f.mlr!==''&&f.mlr!=null))
+    .map(f=>({region:f.region||'',muscle:(f.muscle||'').trim(),laterality:f.laterality||'',
+      grade:(f.grade===''||f.grade==null)?'':+f.grade,
+      suvmax:(f.suvmax===''||f.suvmax==null)?'':f.suvmax,
+      mlr:(f.mlr===''||f.mlr==null)?'':f.mlr}));
 }
 function findingsSummary(){
   return cleanFindings().map(f=>{
     let s=(f.muscle||'?'); if(f.region)s+=' ('+f.region+')';
     if(f.laterality)s+=' — '+f.laterality; if(f.grade!==''&&f.grade!=null)s+=' · G'+f.grade;
+    if(f.suvmax!=='')s+=' · SUVmax '+f.suvmax;
     return s;
   }).join('; ');
 }
@@ -571,22 +570,31 @@ function fieldControl(f){
   } else if(f.t==='area'){
     control=`<div class="control"><textarea id="${id}" class="txt" ${f.ph?`placeholder="${f.ph}"`:''}></textarea></div>`;
   } else { // num
-    control=`<div class="control"><input id="${id}" class="txt num" type="text" inputmode="decimal" autocomplete="off"/>${f.u?`<span class="unit">${f.u}</span>`:''}</div>`;
+    const roAttr = f.calc ? ' readonly' : '';
+    control=`<div class="control"><input id="${id}" class="txt num${f.calc?' calc':''}" type="text" inputmode="decimal"${roAttr} autocomplete="off"/>${f.u?`<span class="unit">${f.u}</span>`:''}</div>`;
   }
   wrap.innerHTML=label+control;
   const el=wrap.querySelector('#'+CSS.escape(id));
   if(state[f.k]!=null) el.value=state[f.k];
-  const commit=()=>{ state[f.k]= el.value===''?undefined:el.value; onChange(); };
+  if(f.calc){ return wrap; }   // computed field: no manual input binding
+  const commit=()=>{ state[f.k]= el.value===''?undefined:el.value; if(f.k==='weight'||f.k==='height') recomputeBMI(); onChange(); };
   el.addEventListener('input',commit); el.addEventListener('change',commit);
   return wrap;
+}
+
+function recomputeBMI(){
+  const w=parseFloat(state.weight), h=parseFloat(state.height);
+  let bmi='';
+  if(w>0 && h>0){ const m=h/100; bmi=Math.round((w/(m*m))*10)/10; }
+  state.bmi = bmi===''?undefined:String(bmi);
+  const el=document.getElementById('f_bmi'); if(el) el.value = bmi===''?'':bmi;
 }
 
 function segHTML(key){
   const v=state[key];
   return `<div class="seg" data-seg="${key}">
     <button class="yes" data-v="Yes" aria-pressed="${v==='Yes'}">Yes</button>
-    <button class="no" data-v="No" aria-pressed="${v==='No'}">No</button>
-    <button class="na" data-v="Unknown" aria-pressed="${v==='Unknown'}">—</button></div>`;
+    <button class="no" data-v="No" aria-pressed="${v==='No'}">No</button></div>`;
 }
 function bindSeg(scope,key){
   scope.querySelectorAll(`[data-seg="${key}"] button`).forEach(btn=>{
@@ -635,11 +643,15 @@ function renderSection(){
           <div class="field"><label>Muscle name</label><div class="control"><input class="txt f-muscle" type="text" placeholder="e.g. Deltoid" value="${(f.muscle||'').replace(/"/g,'&quot;')}" autocomplete="off"/></div></div>
           <div class="field"><label>Region / site</label><div class="control"><select class="txt f-region"><option value="">—</option>${s.regions.map(r=>`<option ${f.region===r?'selected':''}>${r}</option>`).join('')}</select></div></div>
           <div class="field wide"><label>Laterality of uptake</label><div class="seg3">${s.laterality.map(l=>`<button class="f-lat" data-v="${l}" aria-pressed="${f.laterality===l}">${l}</button>`).join('')}</div></div>
+          <div class="field"><label>SUVmax</label><div class="control"><input class="txt num f-suvmax" type="text" inputmode="decimal" value="${f.suvmax==null?'':f.suvmax}" autocomplete="off"/></div></div>
+          <div class="field"><label>Muscle-to-liver ratio</label><div class="control"><input class="txt num f-mlr" type="text" inputmode="decimal" value="${f.mlr==null?'':f.mlr}" autocomplete="off"/></div></div>
           <div class="field"><label>Intensity vs liver <span class="hint">· optional</span></label><div class="control"><select class="txt f-grade"><option value="">—</option>${[0,1,2,3].map(g=>`<option value="${g}" ${String(f.grade)===String(g)?'selected':''}>Grade ${g}</option>`).join('')}</select></div></div>
         </div>`;
       card.querySelector('.f-muscle').addEventListener('input',e=>{f.muscle=e.target.value;onChange();});
       card.querySelector('.f-region').addEventListener('change',e=>{f.region=e.target.value;onChange();});
       card.querySelector('.f-grade').addEventListener('change',e=>{f.grade=e.target.value;onChange();});
+      card.querySelector('.f-suvmax').addEventListener('input',e=>{f.suvmax=e.target.value;onChange();});
+      card.querySelector('.f-mlr').addEventListener('input',e=>{f.mlr=e.target.value;onChange();});
       card.querySelectorAll('.f-lat').forEach(b=>b.onclick=()=>{
         f.laterality = f.laterality===b.dataset.v?'':b.dataset.v;
         card.querySelectorAll('.f-lat').forEach(x=>x.setAttribute('aria-pressed',f.laterality===x.dataset.v));
@@ -729,6 +741,7 @@ function buildRecord(){
   const rec={
     record_id:'r-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6),
     submitted_at:new Date().toISOString(),
+    patient_name:document.getElementById('m_name').value.trim(),
     patient_id:document.getElementById('m_pid').value.trim(),
     scan_date:document.getElementById('m_date').value,
     operator:document.getElementById('m_op').value.trim(),
@@ -836,6 +849,7 @@ function resetForm(){
   for(const k in state) delete state[k];
   findings=[];
   visualGrade=null;
+  document.getElementById('m_name').value='';
   document.getElementById('m_pid').value='';
   // keep operator + date for the next patient
   activeSection=SECTIONS[0].id;
@@ -852,13 +866,14 @@ function loadRecord(rec){
   for(const k in state) delete state[k];
   findings=[];
   visualGrade=null;
+  document.getElementById('m_name').value = rec.patient_name!=null?rec.patient_name:'';
   document.getElementById('m_pid').value = rec.patient_id!=null?rec.patient_id:'';
   if(rec.scan_date) document.getElementById('m_date').value = String(rec.scan_date).slice(0,10);
   if(rec.operator!=null && rec.operator!=='') document.getElementById('m_op').value = rec.operator;
   const val = v => (v===''||v==null) ? undefined : v;
   SECTIONS.forEach(s=>{
     if(s.kind==='exclusion'){ s.fields.forEach(([k])=>{ state[k]=(rec[k]==='Yes')?'Yes':undefined; }); }
-    else if(s.kind==='findings'){ findings=Array.isArray(rec.findings)?rec.findings.map(x=>({region:x.region||'',muscle:x.muscle||'',laterality:x.laterality||'',grade:(x.grade===''||x.grade==null)?'':x.grade})):[]; }
+    else if(s.kind==='findings'){ findings=Array.isArray(rec.findings)?rec.findings.map(x=>({region:x.region||'',muscle:x.muscle||'',laterality:x.laterality||'',grade:(x.grade===''||x.grade==null)?'':x.grade,suvmax:(x.suvmax==null)?'':x.suvmax,mlr:(x.mlr==null)?'':x.mlr})):[]; }
     else { s.fields.forEach(f=>{ state[f.k]=val(rec[f.k]); }); if(s.id==='uptake'){ const g=rec.visual_grade; visualGrade=(g===''||g==null)?null:+g; } }
   });
   editingRecordId = rec.record_id || null;
